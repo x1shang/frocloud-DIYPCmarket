@@ -3,13 +3,15 @@
 > 一份装机市场调研表。把显卡、CPU、内存、机箱散热电源的价格与用料，
 > 压成九张可以横向对比的「天梯图」—— 数据全都活在一个 Excel 工作簿里。
 
+<img width="1173" height="885" alt="image" src="https://github.com/user-attachments/assets/96e8a09b-eedc-44a1-8a1d-e780eae4a4bf" />
+
 ---
 
 ## 📦 仓库里有什么
 
 | 文件 | 说明 |
 |---|---|
-| `frocloud.xlsx` | **主体**。97个工作表，约 62 KB。2023-05 建档，持续更新（最近 2026-10-04） |
+| `frocloud.xlsx` | **主体**。7个工作表，约 62 KB。2023-05 建档，持续更新（最近 2026-10-04） |
 | `.gitignore` | 挡掉 Office/WPS 锁文件之类的噪声 |
 | `README.md` | 你在这儿 |
 
