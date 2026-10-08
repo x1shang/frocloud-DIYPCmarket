@@ -19,6 +19,22 @@
 
 ---
 
+## ⚡ 30 秒用上这份数据
+
+| 你想做什么 | 直接拿 |
+|---|---|
+| 看结论与天梯图 | [`frocloud.xlsx`](frocloud.xlsx)（设计稿，八张工作表 + 天梯图） |
+| 写程序 / 做分析 | [`data/`](data/) 里的 **7 份 CSV**（字段字典见下文「data/ 里有什么」） |
+| 只看某一类 | [`gpu-tier.csv`](data/gpu-tier.csv) · [`cpu-tier.csv`](data/cpu-tier.csv) · [`gpu-prices.csv`](data/gpu-prices.csv) · [`cpu-prices.csv`](data/cpu-prices.csv) · [`memory-prices.csv`](data/memory-prices.csv) · [`gpu-brands.csv`](data/gpu-brands.csv) · [`laptop-cpu-tier.csv`](data/laptop-cpu-tier.csv) |
+
+**数据截止日：2026.10.2。** 价格口径、单位与已知局限见下方「⚠️ 读者须知」。
+
+**发现数据错了、或某个字段看不明白？** → [开一个 Issue](https://github.com/x1shang/frocloud-DIYPCmarket/issues/new/choose)，只要写清三件事：**哪个文件/哪一行 · 你看到的值 · 你认为正确的值 + 依据（链接或截图）**。
+
+> 授权：**数据与文档 CC BY 4.0、`tools/` 脚本 MIT**（混合许可，见 [`LICENSE`](LICENSE) 与 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)）。转发请注明出处。
+
+---
+
 ## 📦 仓库里有什么
 
 | 文件 | 说明 |
