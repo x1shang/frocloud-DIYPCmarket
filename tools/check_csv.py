@@ -357,9 +357,51 @@ def check_against_xlsx(tables, verbose):
     if "内存行情" in wb.sheetnames:
         ws = wb["内存行情"]
         wsf = openpyxl.load_workbook(XLSX, data_only=False)["内存行情"]
-        bad, checked, stale = 0, 0, []
+        checked, stale = 0, []
         year_of, month_of, cur = {}, {}, None
-        from openpyxl.utils import get_column_letter as gl
+
+        # 从公式本身解析它引用的单元格区域 —— 必须按"公式自己的输入"复算，
+        # 不能把同组所有容量一起平均（那算出来是另一个数），
+        # 也不能拿中间公式（如 G18 =1759/2000）的缓存值当真值。
+        def referenced(addr):
+            f = wsf[addr].value
+            if not isinstance(f, str) or not f.startswith("="):
+                return None, None
+            m = re.search(r"\b(AVERAGE|SUM|MAX|MIN)\(([A-Z]+)(\d+):([A-Z]+)(\d+)\)", f)
+            if not m:
+                return None, None
+            return m.group(1), [("%s%d" % (m.group(2), r)) for r in range(int(m.group(3)), int(m.group(5)) + 1)]
+
+        def eval_cell(addr, depth=0):
+            """尽量把公式算成数：支持 ROUND/AVERAGE/SUM/MAX/MIN、除法、加法"""
+            f = wsf[addr].value
+            if not isinstance(f, str) or not f.startswith("="):
+                return f if isinstance(f, (int, float)) else None
+            if depth > 4:
+                return None
+            body = f[1:].strip()
+            m = re.fullmatch(r"ROUND\((.+?),(\d+)\)", body)
+            inner, nd = (m.group(1), int(m.group(2))) if m else (body, None)
+            m2 = re.fullmatch(r"(AVERAGE|SUM|MAX|MIN)\(([A-Z]+)(\d+):([A-Z]+)(\d+)\)", inner)
+            if m2:
+                col = m2.group(2)
+                vals = [eval_cell("%s%d" % (col, r), depth + 1)
+                        for r in range(int(m2.group(3)), int(m2.group(5)) + 1)]
+                vals = [v for v in vals if isinstance(v, (int, float))]
+                if not vals:
+                    return None
+                agg = {"AVERAGE": lambda v: sum(v) / len(v), "SUM": sum,
+                       "MAX": max, "MIN": min}[m2.group(1)]
+                out = agg(vals)
+            else:
+                m3 = re.fullmatch(r"([\d.]+)\s*/\s*([\d.]+)", inner)
+                if not m3:
+                    return None
+                out = float(m3.group(1)) / float(m3.group(2))
+            return round(out, nd) if nd is not None else out
+
+        for r in range(1, ws.max_row + 1):
+            y = ws.cell(row=r, column=1).value
         for c in range(1, ws.max_column + 1):
             y = ws.cell(row=1, column=c).value
             if isinstance(y, (int, float)) and not isinstance(y, bool):
@@ -368,33 +410,45 @@ def check_against_xlsx(tables, verbose):
             m = ws.cell(row=2, column=c).value
             if isinstance(m, (int, float)) and not isinstance(m, bool):
                 month_of[c] = int(m)
-        for r, (cat, spec, kind) in {6: ("内存 DDR4", "AVG", "avg"), 12: ("内存 DDR5", "MAX", "max"),
-                                     13: ("内存 DDR5", "MIN", "min"), 16: ("固态 PCIE4.0", "AVG", "avg"),
-                                     19: ("固态 PCIE5.0", "AVG", "avg"), 23: ("机械硬盘 HDD", "AVG", "avg")}.items():
+
+        # 聚合行的行号 -> 这个聚合叫什么
+        AGG_ROWS = {6: "AVG", 12: "MAX", 13: "MIN", 16: "AVG", 19: "AVG", 23: "AVG"}
+        # 先算出"哪些格是中间值"（被别的公式引用），这些格的缓存值不参与判定
+        intermediates = set()
+        for r in AGG_ROWS:
+            for c in month_of:
+                _, refs = referenced(wsf.cell(row=r, column=c).coordinate)
+                for ref in (refs or []):
+                    intermediates.add("内存行情!" + ref)
+
+        for r, kind in AGG_ROWS.items():
             for c, month in month_of.items():
-                exp = ws.cell(row=r, column=c).value
-                if not isinstance(exp, (int, float)):
+                addr = wsf.cell(row=r, column=c).coordinate
+                formula = wsf[addr].value
+                if not isinstance(formula, str) or not formula.startswith("="):
                     continue
-                key = (cat, "%d-%02d" % (year_of[c], month))
-                vals = list(groups.get(key, {}).values())
-                if not vals:
+                if "内存行情!" + addr in intermediates:
+                    continue                       # 中间值，不判定（最后有汇总提示）
+                want = eval_cell(addr)             # 按公式自己的输入复算
+                got = ws[addr].value               # xlsx 里的缓存值
+                if want is None or not isinstance(got, (int, float)):
                     continue
-                got = {"avg": sum(vals) / len(vals), "max": max(vals), "min": min(vals)}[kind]
                 checked += 1
-                if abs(got - float(exp)) > 0.011:
-                    bad += 1
-                    stale.append("%s %s %s：按 CSV 原始单价应为 %.3f，xlsx 里是 %.3f（公式 %s）"
-                                 % (cat, key[1], kind.upper(), got, float(exp),
-                                    wsf.cell(row=r, column=c).value))
+                if abs(want - float(got)) > 0.005:
+                    stale.append("%s 的 %s：按公式输入应为 %s，文件里缓存的是 %s（公式 %s）"
+                                 % (addr, kind, want, got, formula))
+
         if checked:
-            ok("内存/存储聚合值 %d 处重算对照完成（AVG / MAX / MIN）" % checked)
+            ok("内存/存储聚合值 %d 处按公式输入复算对照完成（AVG / MAX / MIN）" % checked)
+        if intermediates:
+            notes.append("内存行情有 %d 个格是聚合公式的中间值（如 G18 =1759/2000），"
+                         "其数值由聚合公式直接引用，不单独判定；CSV 也不导出中间层。"
+                         % len([a for a in intermediates if a.startswith("内存行情!")]))
         if stale:
             for s in stale[:6]:
-                notes.append("xlsx 缓存值与公式输入不一致（打开重算即可）：" + s)
+                notes.append("xlsx 里的公式缓存值落后于它的输入（在 WPS/Excel 里打开另存一次即可重算）：" + s)
             if len(stale) > 6:
-                notes.append("另有 %d 处同类不一致" % (len(stale) - 6))
-        elif not checked:
-            warn("内存聚合值没有可校验的交集")
+                notes.append("另有 %d 处同类" % (len(stale) - 6))
 
     # 显卡涨幅：把原表公式的基准列与 CSV 的"表内历史最低价"对照
     if "显卡行情" in wb.sheetnames and "gpu-prices.csv" in tables:
