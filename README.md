@@ -29,7 +29,10 @@
 | `AGENTS.md` | **给 AI 助手 / 自动化的硬约束**（见下面「AGENT 请看这里」） |
 | `.githooks/commit-msg` | 改了 xlsx 却没带 `[handmade-xlsx]` 标记时拦下提交 |
 | `.github/workflows/check-csv.yml` | CI：提交信息以 `(prerelease)` 结尾时自动跑导出 + 校验 + 同步检查（也可手动触发） |
-| `LICENSE` | 数据用 CC BY 4.0，附第三方数据来源与免责声明 |
+| `LICENSE` | **授权总览**：本仓库是混合许可 —— 数据与文档 CC BY 4.0、`tools/` 脚本 MIT |
+| `LICENSES/` | 两份许可全文：`CC-BY-4.0.txt`（Creative Commons 官方英文 legalcode，逐字收录）、`MIT.txt` |
+| `THIRD_PARTY_NOTICES.md` | 引用的第三方跑分 / 拆解 / 行情来源与商标声明 |
+| `DISCLAIMER.md` | 免责声明、使用限制与联系渠道 |
 | `.gitignore` | 挡掉 Office/WPS 锁文件之类的噪声 |
 | `README.md` | 你在这儿 |
 
@@ -112,7 +115,7 @@ git commit -m "data-2026-11 (prerelease) [handmade-xlsx]"
 |---|---|
 | xlsx | **只读**。没有例外，也没有"我是为了修复才写的" |
 | `data/*.csv` | 只能由 `python tools/export_csv.py` 生成，不得手改；改数据只能由人改 xlsx 后重导 |
-| `README.md` | 由维护者手工维护；除非他明确让你改，否则不要动 |
+| `README.md` | 可写。改之前先通读，保留维护者原有的表述与口径 |
 | 做完必跑 | `python tools/test_materialize.py` 与 `python tools/check_csv.py`，必须 0 错误；**不要靠放宽断言让检查变绿** |
 
 完整规矩（含"已经发生过的事故"清单与可写范围表）在 [`AGENTS.md`](AGENTS.md)。
@@ -188,10 +191,27 @@ CSV 是**长表**（一行一个事实，时间放字段），不是把 Excel �
 - 编码 **UTF-8 with BOM**（`utf-8-sig`），Windows 双击用 Excel 打开不会乱码。
 - 文本不允许以 `=` `+` `-` `@` 开头（防公式注入）；含逗号的字段自动加引号。
 - **派生列不进 CSV**：`涨幅`、`性能/价格`、内存的 `AVG / MAX / MIN` 都由脚本或校验脚本按原始价格现算。它们留在 xlsx 里。
-- 原表里凡是空着的格，CSV 里也是空 —— 不补 0、不猜测、不用上一行的值填充。
+
+### 空值口径：数据文件里的「空」是什么意思
+
+> 这一节讲的是**数据怎么读**，不是许可证条款 —— 授权见 [`LICENSE`](LICENSE)，免责见 [`DISCLAIMER.md`](DISCLAIMER.md)。
+
+- 空单元格 / 空字段 = **原表里就没有这个数据** —— 不补 0、不猜测、不用上一行的值填充。
 - **唯一的例外是合并单元格的标签**：合并段的空白不是"缺数据"，而是"这个标签适用于整段"，导出时必须物化到该段每一行（例如「显卡品牌」的 `B3:B6 = 一线`，32 行里 26 行靠这个规则拿到分级）。
   合并段**锚点本身就是空的**（例如 Intel 区 `B32:B37` 没写分级），物化后仍然是空 —— 那才是真空白，如实留空。
   这条规则由 `tools/test_materialize.py` 守着（真实数据不依赖它，用现造的小工作簿回归）。
+
+数据部分的 SPDX 标识：
+
+```text
+SPDX-License-Identifier: CC-BY-4.0
+SPDX-FileCopyrightText: 2023-2026 x1shang
+```
+
+### 两个别踩的坑
+
+- **CSV 是机器生成的**（`python tools/export_csv.py`），不得手改，也不要在 CSV 里加注释行 —— CI 会逐字节对比"重新导出的结果"与仓库里的 `data/*.csv`。
+- **CSV 与 xlsx 不一致时**，`tools/check_csv.py` 会报错 —— 正确反应是**告诉维护者**，而不是自己动手改其中任何一边（改数据只能由人改 xlsx 后重新导出）。
 
 ---
 
@@ -250,7 +270,7 @@ git tag data-2026-11; git push --tags
 - 涨幅计算方法：(当前月价格-表格中历史最低价)/表格中历史最低价*100%
 - 用料来源：来自b站up“51972”“和微论件”的相关资料。本人为爱发电，无力购买各款显卡进行测试，如有错误敬请指正。
 ### 已知局限
-本人为DIY发烧友，并非专业测试团队，跑分和用料数据均非自行测量，仅供参考，不建议以本仓库作为数据检索来源。如使用责任自负（见LICENSE）
+本人为DIY发烧友，并非专业测试团队，跑分和用料数据均非自行测量，仅供参考，不建议以本仓库作为数据检索来源。如使用责任自负（见 [DISCLAIMER.md](DISCLAIMER.md)）
 
 - **没有渠道**：CSV 的 `channel` 一栏目前是空的 —— 原表只记了"取各店铺在售最低价"，没有区分京东自营 / 第三方 / 淘宝 / 闲鱼，也没区分是否含运费。这是当前最大的口径缺口，往后会补。
 - **各表截止月不完全一致**：以「说明」表里的工作表索引为准。
@@ -258,7 +278,12 @@ git tag data-2026-11; git push --tags
 
 由于表格手搓，输入错误在所难免，修订也不免挂一漏万，烦请读者指正：请到 [Issues](https://github.com/x1shang/frocloud-DIYPCmarket/issues) 提，谢谢。
 ### 授权与免责
-见 [LICENSE](LICENSE)（数据 CC BY 4.0；第三方跑分来源与免责声明同在其中）
+本仓库是**混合许可**仓库：数据与文档 CC BY 4.0、`tools/` 脚本 MIT、第三方资料另计。
+
+- 授权总览：[LICENSE](LICENSE)
+- 许可全文：[`LICENSES/CC-BY-4.0.txt`](LICENSES/CC-BY-4.0.txt)（官方 legalcode 逐字收录）、[`LICENSES/MIT.txt`](LICENSES/MIT.txt)
+- 第三方跑分 / 拆解 / 行情来源与商标：[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- 免责声明与联系：[DISCLAIMER.md](DISCLAIMER.md)
 
 > 价格随渠道时间波动，仅供装机参考，不构成购买建议
 
@@ -276,4 +301,12 @@ git tag data-2026-11; git push --tags
   - 新增 **`AGENTS.md`** 与本节「AGENT 请看这里」：把「`frocloud.xlsx` 只准人碰」钉成硬约束；
     **删除**了仓库里唯一能写 xlsx 的工具（`tools/refresh_release_copy.py`），
     现在 `tools/` 下只剩只读脚本。
+
+- **2026-10-08（许可整理）** —— 把「许可」与「说明」拆开：
+  - `LICENSE` 只留**授权总览**（混合许可：数据与文档 CC BY 4.0 / `tools/` 脚本 MIT / 第三方资料另计）。
+  - 新增 **`LICENSES/`**：`CC-BY-4.0.txt`（Creative Commons 官方英文 legalcode，逐字收录、未改一字）、`MIT.txt`（版权年份写全为 2023-2026）。
+  - 第三方来源与商标 → **`THIRD_PARTY_NOTICES.md`**；免责与联系 → **`DISCLAIMER.md`**。
+  - 数据「空值口径 / 合并单元格物化」并入本页 **「空值口径」** 一节，不再单独成文。
+  - `tools/*.py` 文件头补 `SPDX-License-Identifier: MIT`。
+  - **README 不再是维护者独占**：`AGENTS.md` 放开了 README 的可写范围 —— 全仓库只剩 **`frocloud.xlsx`** 一个绝对禁区。
 
