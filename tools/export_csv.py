@@ -505,7 +505,8 @@ def export_brands(src, rep):
 
 
 # ============================================================ 主流程
-def build(export=True):
+def build(export=True, out_dir=None):
+    out_dir = out_dir or DATA
     src = Src(XLSX)
     if src.v_path != XLSX:
         print("注意：%s 没有 Excel 缓存值，计算结果改从 %s 读取"
@@ -527,7 +528,7 @@ def build(export=True):
     out["gpu-brands.csv"] = export_brands(src, rep)
     if export:
         for name, (header, rows) in out.items():
-            n = write_csv(os.path.join(DATA, name), header, rows)
+            n = write_csv(os.path.join(out_dir, name), header, rows)
             print("  %-22s %4d 行  %s" % (name, n, ", ".join(header)))
     rep.dump(src.f)
     return out, rep
@@ -536,13 +537,16 @@ def build(export=True):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true", help="只解析，不写文件")
+    ap.add_argument("--out-dir", default=None,
+                    help="输出目录（默认 data/）。CI 会导出到临时目录再和仓库里的对比，"
+                         "这样校验过程不会碰到工作区里的任何文件。")
     args = ap.parse_args()
     print("源工作簿：%s" % os.path.relpath(XLSX, ROOT))
-    print("导出目录：%s（编码 %s）" % (os.path.relpath(DATA, ROOT), ENCODING))
+    print("导出目录：%s（编码 %s）" % (args.out_dir or os.path.relpath(DATA, ROOT), ENCODING))
     print()
-    out, _ = build(export=not args.check)
+    out, _ = build(export=not args.check, out_dir=args.out_dir)
     if not args.check:
-        print("\n完成：%d 个 CSV 已写入 %s" % (len(out), os.path.relpath(DATA, ROOT)))
+        print("\n完成：%d 个 CSV 已写入 %s" % (len(out), args.out_dir or os.path.relpath(DATA, ROOT)))
 
 
 if __name__ == "__main__":

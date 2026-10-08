@@ -78,25 +78,34 @@ jobs:
               ;;
           esac
 
-      - name: 导出 CSV（顺带验证表头没有漂移）
+      - name: 导出 CSV 到临时目录（顺带验证表头没有漂移）
         # export_csv.py 遇到没登记过的表头列会直接报错，并指出是哪一列
-        run: python tools/export_csv.py
+        # 注意：刻意写进临时目录而不是 data/，这一步就不会碰到工作区里的任何文件
+        run: python tools/export_csv.py --out-dir /tmp/fresh-csv
 
       - name: 回归测试（合并单元格标签必须物化）
         run: python tools/test_materialize.py
 
-      - name: 校验 CSV
+      - name: 校验仓库里的 CSV
         run: python tools/check_csv.py -v
 
-      - name: 检查 xlsx 是否与 CSV 同步
-        # 如果手工改了 xlsx 却没重新导出，这里会失败
+      - name: 检查 data/*.csv 是否与 frocloud.xlsx 同步
+        # 只比"重新导出的结果"和"提交进仓库的 CSV"：
+        # 一致 → 说明 data/ 没有手改、也没落后于 xlsx。
+        # 这一步不牵扯 README / AGENTS.md 等任何其他文件。
         run: |
-          if ! git diff --quiet -- data/; then
-            echo "::error::data/*.csv 与 frocloud.xlsx 不同步 —— 请本地跑 python tools/export_csv.py 后一起提交"
-            git --no-pager diff --stat -- data/
-            exit 1
+          set +e
+          diff -rq /tmp/fresh-csv data/ > /tmp/csv-diff.txt 2>&1
+          rc=$?
+          set -e
+          if [ "$rc" = "0" ]; then
+            echo "data/*.csv 与 frocloud.xlsx 一致 ✓（重新导出后无任何差异）"
+            exit 0
           fi
-          echo "CSV 与 xlsx 一致 ✓"
+          echo "::error::data/*.csv 与 frocloud.xlsx 不一致 —— 可能是手工改了 CSV，或改了 xlsx 后忘了重新导出"
+          cat /tmp/csv-diff.txt
+          echo "正确做法：本地跑 python tools/export_csv.py，把 data/ 的变化一起提交"
+          exit 1
 
       - name: 数据新鲜度（超过 45 天未更新只警告，不失败）
         shell: python

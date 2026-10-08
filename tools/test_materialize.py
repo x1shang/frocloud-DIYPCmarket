@@ -104,6 +104,8 @@ def main():
 
     print()
     print("断言：⑤ 检查脚本也会拦住这种回归")
+    print("   （下面这条 [ERR ] 是**故意**触发的：把 fixture 的 tier 清空，")
+    print("     验证 check_brands 确实会报错。它写在 stderr 上，不计入本测试的失败。）")
     try:
         import check_csv as ck
         tables = {"gpu-brands.csv": [[r[0], r[1], r[2]] + r[3:] for r in rows]}
@@ -114,7 +116,8 @@ def main():
                 r[1] = ""
         ck.errors.clear(), ck.warnings.clear(), ck.notes.clear()
         ck.XLSX = tmp
-        ck.check_brands({"gpu-brands.csv": broken}, False)
+        ck.check_brands({"gpu-brands.csv": broken}, False, label="【预期报错 · 回归测试用】")
+        print("   （上面那条 [ERR ] 到此为止，属于预期输出）")
         expect(len(ck.errors) > 0, "把 tier 清空后 check_brands 报错（拦住绿着错）")
     except Exception as e:
         expect(False, "调用 check_brands 失败：%s" % e)

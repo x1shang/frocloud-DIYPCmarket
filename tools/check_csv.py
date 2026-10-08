@@ -68,9 +68,17 @@ warnings = []
 notes = []
 
 
-def err(msg):
+def err(msg, stream=None):
+    """默认写到 stderr —— 这样被别的脚本（如 test_materialize.py）调用时，
+    故意触发的报错不会污染调用方的 stdout。"""
     errors.append(msg)
-    print("  [ERR ] " + msg)
+    target = stream or sys.stderr
+    try:
+        print("  [ERR ] " + msg, file=target)
+        target.flush()
+    except Exception:
+        # stderr 不可用时兜底到 stdout，绝不能因为打日志失败而吞掉错误
+        print("  [ERR ] " + msg)
 
 
 def warn(msg):
@@ -246,7 +254,7 @@ def check_tier_math(tables, verbose):
 
 
 # ------------------------------------------------------------------ ⑪
-def check_brands(tables, verbose):
+def check_brands(tables, verbose, label=""):
     """显卡品牌：vendor_group / tier 必须物化到每一行。
 
     原表里 B 列「品牌分级」是合并单元格（B3:B6=一线 …）—— 合并段的空白是
@@ -255,18 +263,24 @@ def check_brands(tables, verbose):
 
     但"合并段的锚点本身就是空的"是另一回事（Intel 区 B32:B37 原表确实没写
     分级）—— 那是真空白，如实留空，只降级为 NOTE，不算错误。两者必须分开。
+
+    label: 非空时作为报错前缀，供回归测试标注"预期报错"，免得 CI 日志里
+           那条故意触发的报错被误读成真失败。
     """
+    def e(msg):
+        err((label + msg) if label else msg)
+
     print("\n3b) 显卡品牌：阵营 / 品牌分级必须逐行物化  [⑪]")
     body = tables.get("gpu-brands.csv") or []
     if not body:
-        err("gpu-brands.csv 没有数据行")
+        e("gpu-brands.csv 没有数据行")
         return
     h = BRAND_HEADER
     gi, ti = h.index("vendor_group"), h.index("tier")
     bad_v = [i + 2 for i, r in enumerate(body) if not r[gi].strip()]
     blank_t = [r for r in body if not r[ti].strip()]
     if bad_v:
-        err("gpu-brands.csv 有 %d 行 vendor_group 为空（第 %s 行）" % (len(bad_v), bad_v[:8]))
+        e("gpu-brands.csv 有 %d 行 vendor_group 为空（第 %s 行）" % (len(bad_v), bad_v[:8]))
     else:
         ok("vendor_group 全部非空（%d 行）" % len(body), verbose)
 
@@ -287,14 +301,14 @@ def check_brands(tables, verbose):
             sheet_rows = [r for r in range(3, ws.max_row + 1)
                           if ws.cell(row=r, column=3).value not in (None, "")
                           and norm(ws.cell(row=r, column=3).value) != "显卡品牌"]
-        except Exception as e:
-            warn("无法读 xlsx 判断空 tier 的类别（%s），一律按错误处理" % e)
+        except Exception as ex:
+            warn("无法读 xlsx 判断空 tier 的类别（%s），一律按错误处理" % ex)
 
         if sheet_rows is None:
             not_materialized = list(blank_t)
         elif len(sheet_rows) != len(body):
-            err("gpu-brands.csv 有 %d 行，原表品牌数据行有 %d 行，数量对不上 —— "
-                "很可能是导出时把某个表头行当成数据、或漏掉了某行" % (len(body), len(sheet_rows)))
+            e("gpu-brands.csv 有 %d 行，原表品牌数据行有 %d 行，数量对不上 —— "
+              "很可能是导出时把某个表头行当成数据、或漏掉了某行" % (len(body), len(sheet_rows)))
             not_materialized = list(blank_t)
         else:
             for r, srow in zip(body, sheet_rows):
@@ -306,10 +320,10 @@ def check_brands(tables, verbose):
                     by_design.append(r)                    # 该段锚点本来就空 → 真空白
 
     if not_materialized:
-        err("gpu-brands.csv 有 %d/%d 行 tier 为空，且这些行落在 B 列合并段内 —— "
-            "说明合并标签没被物化。示例：%s"
-            % (len(not_materialized), len(body),
-               "、".join("%s(%s)" % (r[2], r[0]) for r in not_materialized[:8])))
+        e("gpu-brands.csv 有 %d/%d 行 tier 为空，且这些行落在 B 列合并段内 —— "
+          "说明合并标签没被物化。示例：%s"
+          % (len(not_materialized), len(body),
+             "、".join("%s(%s)" % (r[2], r[0]) for r in not_materialized[:8])))
     if by_design:
         notes.append("gpu-brands.csv 有 %d 行 tier 为空，均为原表该合并段锚点本身未写分级（真空白，如实留空）：%s"
                      % (len(by_design), "、".join("%s(%s)" % (r[2], r[0]) for r in by_design)))
