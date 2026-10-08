@@ -1,0 +1,101 @@
+name: check-csv
+
+# 数据校验 = 这个仓库的 CI。
+#
+# 触发方式：
+#   1. 提交信息【以 (prerelease) 结尾】—— 例如
+#        git commit -m "data-2026-11 (prerelease)"
+#      整条信息以 (prerelease) 收尾时跑（尾部空白无所谓）。
+#   2. 手动：Actions 页面 → check-csv → Run workflow
+#
+# 为什么不用 schedule：数据是月更、"更新到几月"取决于有没有采到，
+# 定时任务很容易在"这个月就是没更"的时候红掉，反而变成噪声。
+# 想手动确认一次数据是否仍然合规，点 Run workflow 即可。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    # 只认"提交信息以 (prerelease) 结尾"的 push；手动触发不做这个限制。
+    if: github.event_name == 'workflow_dispatch' || endsWith(github.event.head_commit.message, '(prerelease)')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: python -m pip install --quiet openpyxl
+
+      - name: 守卫 —— 机器不许碰 frocloud.xlsx
+        # 规则：工作簿是纯手搓的设计稿。脚本只准读它。
+        # 人工编辑请在提交信息里带 [handmade-xlsx]；不带标记而改动了 xlsx，就拦下来。
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            BEFORE="$(git rev-parse HEAD~1 2>/dev/null || echo '')"
+          fi
+          if [ -z "$BEFORE" ]; then
+            echo "首次提交（没有父提交），守卫跳过 ✓"
+            exit 0
+          fi
+          if git diff --quiet "$BEFORE" "${{ github.sha }}" -- frocloud.xlsx 2>/dev/null; then
+            echo "frocloud.xlsx 未改动 ✓"
+            exit 0
+          fi
+          msg="$(git log -1 --pretty=%B)"
+          case "$msg" in
+            *"[handmade-xlsx]"*)
+              echo "frocloud.xlsx 有改动，且提交信息带 [handmade-xlsx] 标记 —— 视为人工编辑 ✓"
+              ;;
+            *)
+              echo "::error::frocloud.xlsx 被改动了，但提交信息里没有 [handmade-xlsx] 标记。"
+              echo "规则：这份工作簿纯手搓，任何脚本都不得写入它。"
+              echo "如果你确实是在 WPS/Excel 里手工改的，请在提交信息里加上 [handmade-xlsx] 重试。"
+              exit 1
+              ;;
+          esac
+
+      - name: 导出 CSV（顺带验证表头没有漂移）
+        # export_csv.py 遇到没登记过的表头列会直接报错，并指出是哪一列
+        run: python tools/export_csv.py
+
+      - name: 回归测试（合并单元格标签必须物化）
+        run: python tools/test_materialize.py
+
+      - name: 校验 CSV
+        run: python tools/check_csv.py -v
+
+      - name: 检查 xlsx 是否与 CSV 同步
+        # 如果手工改了 xlsx 却没重新导出，这里会失败
+        run: |
+          if ! git diff --quiet -- data/; then
+            echo "::error::data/*.csv 与 frocloud.xlsx 不同步 —— 请本地跑 python tools/export_csv.py 后一起提交"
+            git --no-pager diff --stat -- data/
+            exit 1
+          fi
+          echo "CSV 与 xlsx 一致 ✓"
+
+      - name: 数据新鲜度（超过 45 天未更新只警告，不失败）
+        shell: python
+        run: |
+          import datetime as dt, glob, csv, re
+          latest = None
+          for p in glob.glob("data/*-prices.csv"):
+              with open(p, encoding="utf-8-sig") as f:
+                  for row in csv.DictReader(f):
+                      m = re.match(r"^(\d{4})-(\d{2})", row["date"])
+                      if not m:
+                          continue
+                      d = dt.date(int(m.group(1)), int(m.group(2)), 1)
+                      latest = d if latest is None or d > latest else latest
+          if latest is None:
+              raise SystemExit("没读到任何价格数据")
+          days = (dt.date.today() - latest).days
+          print("最新数据月份：%s（%d 天前）" % (latest.strftime("%Y-%m"), days))
+          if days > 45:
+              print("::warning::数据已 %d 天未更新，是不是漏了一次月更？" % days)

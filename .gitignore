@@ -14,6 +14,13 @@
 Thumbs.db
 desktop.ini
 
+# ---------- Python（tools/ 下的导出与校验脚本） ----------
+# 运行 python tools/export_csv.py 会生成字节码缓存，不要提交。
+__pycache__/
+*.py[cod]
+
 # ---------- 注意 ----------
 # frocloud.xlsx 本身是这个仓库的主体内容，必须继续跟踪。
 # 千万不要在这里写 *.xlsx —— 那会把整份数据表排除掉。
+# data/*.csv 是主体数据（机器再生成的那一份），必须继续跟踪。
+# 千万不要在这里写 data/ 或 *.csv。
