@@ -23,10 +23,10 @@
 |---|---|
 | `frocloud.xlsx` | **主体（手搓）**。8 张工作表 = 1 张「说明」+ 7 张数据表；2023-05 建档，持续更新（最近 2026-10-08） |
 | `data/*.csv` | **由 xlsx 机器再生成的 7 个长表 CSV**，与 xlsx 一一对应；这是给机器读、给人 review 的那一份 |
-| `tools/export_csv.py` | xlsx → CSV 的导出脚本（两行表头解析、派生列处理、覆盖报告） |
+| `tools/export_csv.py` | xlsx → CSV 的导出脚本（**只读 xlsx**） |
 | `tools/check_csv.py` | CSV 校验脚本（相当于本仓库的 CI，失败返回非零退出码） |
 | `tools/test_materialize.py` | 回归测试：合并单元格的标签必须物化到整段（用现造的小工作簿跑） |
-| `tools/refresh_release_copy.py` | 唯一被允许写 xlsx 的脚本，需 `--i-am-human` 显式确认（见上面「铁律」） |
+| `AGENTS.md` | **给 AI 助手 / 自动化的硬约束**（见下面「AGENT 请看这里」） |
 | `.githooks/commit-msg` | 改了 xlsx 却没带 `[handmade-xlsx]` 标记时拦下提交 |
 | `.github/workflows/check-csv.yml` | CI：提交信息以 `(prerelease)` 结尾时自动跑导出 + 校验 + 同步检查（也可手动触发） |
 | `LICENSE` | 数据用 CC BY 4.0，附第三方数据来源与免责声明 |
@@ -43,20 +43,27 @@
 
 **这条比上面那条分工更重要。**
 
-`frocloud.xlsx` 是纯手工设计稿 —— 合并单元格、配色、列宽、天梯排序，全是人一格一格调出来的。
-**任何脚本、自动化流程、CI、AI 助手都不得写入它。** 脚本只准**读**它。
+`frocloud.xlsx` 是纯手工设计稿 —— 合并单元格、配色、列宽、冻结窗格、天梯排序、
+工作表改名，全是人一格一格调出来的。
+**任何脚本、自动化流程、CI、AI 助手都不得写入它 —— 连"重建一份等价的"也不行。**
+脚本只准**读**它。
 
-为什么写死这条：机器往 xlsx 里写一次（哪怕是"重建一份等价的工作簿"），就可能静默丢掉
-字体、空字符串单元格、样式索引、单元格缓存值 —— 手工美化的成果是不可复现资产，
-一旦走样就找不回来。（本仓库开发期实测过：一次整本重存把未显式设字体的单元格从宋体变成了 Calibri。）
+它是这个仓库里**唯一不可再生的资产**：数据可以由脚本重新生成，工作簿的外观不能。
+
+为什么写死这条：机器往 xlsx 里写一次，就可能静默丢掉字体、空字符串单元格、样式索引、
+单元格缓存值，或者**给你手调好的工作表加上冻结**、覆盖掉你刚调好的格式 ——
+而机器自己不渲染文件，**根本看不见自己造成的视觉灾难**。
+（这不是假设，是这个仓库真实发生过的事故，见 `AGENTS.md` 的事故记录。）
 
 | 谁 | 能对 xlsx 做什么 |
 |---|---|
 | 人（WPS / Excel 手工编辑） | 读写，随便改 |
 | `tools/export_csv.py` | **只读** —— xlsx → CSV |
 | `tools/check_csv.py` | **只读** —— 拿 xlsx 交叉验证 CSV |
-| `tools/refresh_release_copy.py` | 唯一例外，且**必须带 `--i-am-human` 才会动** —— 从人工维护的原件重建发布副本 |
-| CI / 其它任何脚本 | **只读** |
+| `tools/test_materialize.py` | **不碰真实 xlsx** —— 用现造的小工作簿做回归 |
+| CI / AI 助手 / 其它任何脚本 | **只读，没有例外** |
+
+仓库里**不存在**任何能写 xlsx 的工具，也不允许新增。需要改工作簿就人在 WPS 里改。
 
 ### 三条护栏
 
@@ -70,6 +77,7 @@
    （用 `commit-msg` 而不是 `pre-commit`：提交信息文件是作为参数传进钩子的，`-m` 和编辑器两条路都拿得到。）
 2. **CI 守卫** —— `check-csv.yml` 第一步会对比本次 push 里的 `frocloud.xlsx`：
    有改动且提交信息不带 `[handmade-xlsx]`，直接让 CI 红掉。
+   注意：**护栏只拦"提交"，拦不住"直接运行脚本"** —— 所以真正的约束是上面那条硬规定本身。
 3. **`.gitattributes`** —— 把 xlsx 声明为 binary，不让 Git 做行级 diff / 自动合并
    （它本质是个 zip，行级 diff 只会产生垃圾）。
 
@@ -84,6 +92,30 @@ python tools/check_csv.py
 # 4) 提交时带上标记（两个标记的先后顺序无所谓）
 git commit -m "data-2026-11 (prerelease) [handmade-xlsx]"
 ```
+
+---
+
+## 🤖 AGENT 请看这里
+
+**如果你不是人类维护者，而是 AI 助手 / Coding Agent / 自动化脚本，先读这一节，再读 `AGENTS.md`。**
+
+一句话版本：
+
+> **`frocloud.xlsx` 对你只读。不要创建、修改、重写、移动、删除它。
+> 不要新建任何"能写 xlsx 的脚本"。不要用 `--no-verify` 绕过钩子。
+> 不要未经明确要求就 commit / push / 打 tag / 发 Release。
+> 改 xlsx 是人的事，你的活是读它、导出 CSV、跑校验。**
+
+要知道的四件事：
+
+| 事项 | 规定 |
+|---|---|
+| xlsx | **只读**。没有例外，也没有"我是为了修复才写的" |
+| `data/*.csv` | 只能由 `python tools/export_csv.py` 生成，不得手改；改数据只能由人改 xlsx 后重导 |
+| `README.md` | 由维护者手工维护；除非他明确让你改，否则不要动 |
+| 做完必跑 | `python tools/test_materialize.py` 与 `python tools/check_csv.py`，必须 0 错误；**不要靠放宽断言让检查变绿** |
+
+完整规矩（含"已经发生过的事故"清单与可写范围表）在 [`AGENTS.md`](AGENTS.md)。
 
 ---
 
@@ -239,6 +271,9 @@ git tag data-2026-11; git push --tags
   - 新增 **`说明` 工作表**（放在最前）：来源 / 口径 / 截止日 / 字段字典 / 工作表索引 / 授权与免责。
   - 原 9 张表中，`50系显卡用料`、`机箱散热电源` 两张**私有表移出**并单独归档，不再随工作簿发布。工作簿现为 **8 张表**。
   - 新增 `LICENSE`（CC BY 4.0 + 第三方数据来源 + 免责）。
-  - 新增 `.github/workflows/check-csv.yml`：push / PR 自动跑导出与校验。
+  - 新增 `.github/workflows/check-csv.yml`：`(prerelease)` 提交自动跑导出与校验。
   - 修正 README 与文件不一致的表数、表名与列表。
+  - 新增 **`AGENTS.md`** 与本节「AGENT 请看这里」：把「`frocloud.xlsx` 只准人碰」钉成硬约束；
+    **删除**了仓库里唯一能写 xlsx 的工具（`tools/refresh_release_copy.py`），
+    现在 `tools/` 下只剩只读脚本。
 

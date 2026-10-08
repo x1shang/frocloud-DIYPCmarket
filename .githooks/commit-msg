@@ -41,9 +41,8 @@ cat <<'EOF'
 
       git commit -m "data-2026-11 手工调整 (prerelease) [handmade-xlsx]"
 
-  如果是脚本生成的发布副本需要更新，正确做法是：
-
-      python tools/refresh_release_copy.py --i-am-human
+  如果是某个脚本改出来的 —— 那本身就是违规操作，请先回退：
+  仓库里**不存在**也不允许存在能写 xlsx 的工具（见 AGENTS.md 第 0 条）。
 
   确实想跳过这次检查：
 
