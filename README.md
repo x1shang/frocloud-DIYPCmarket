@@ -1,5 +1,7 @@
 # frocloud · DIYPCmarket
 
+[![check-csv](https://github.com/x1shang/frocloud-DIYPCmarket/actions/workflows/check-csv.yml/badge.svg)](https://github.com/x1shang/frocloud-DIYPCmarket/actions/workflows/check-csv.yml)
+
 > **当前市场状况（导览）**
 
 | 显卡 | CPU | 内存&存储 | 其他硬件 |
@@ -309,4 +311,5 @@ git tag data-2026-11; git push --tags
   - 数据「空值口径 / 合并单元格物化」并入本页 **「空值口径」** 一节，不再单独成文。
   - `tools/*.py` 文件头补 `SPDX-License-Identifier: MIT`。
   - **README 不再是维护者独占**：`AGENTS.md` 放开了 README 的可写范围 —— 全仓库只剩 **`frocloud.xlsx`** 一个绝对禁区。
+  - README 顶部加 **`check-csv` CI 徽章**（点进去就是 Actions 页）。
 
