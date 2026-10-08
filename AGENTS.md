@@ -44,7 +44,8 @@
 | `data/*.csv` | 可写，但**只能**由 `python tools/export_csv.py` 生成，不得手改、不得手工编辑 |
 | `tools/*.py` | 可写（改脚本） |
 | `README.md` | **由维护者手工维护**；除非他明确让你改，否则不要动 |
-| `LICENSE`、`.gitattributes`、`.gitignore` | 可写 |
+| `LICENSE`、`LICENSES/`、`THIRD_PARTY_NOTICES.md`、`DISCLAIMER.md`、`DATA-NOTES.md` | 可写。许可组织方式见 `LICENSE`：数据与文档 CC BY 4.0、`tools/` 脚本 MIT、第三方资料见 `THIRD_PARTY_NOTICES.md` |
+| `.gitattributes`、`.gitignore` | 可写 |
 | `.github/workflows/*` | 可写 |
 | `.githooks/*` | 可写 |
 

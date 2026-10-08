@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: 2023-2026 x1shang
 """
 frocloud · DIYPCmarket —— test_materialize.py
 

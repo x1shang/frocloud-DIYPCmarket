@@ -1,18 +1,22 @@
-# 授权与免责 · LICENSE
+# LICENSE · 授权总览
 
-本仓库分两部分授权 —— **数据与文档用 CC BY 4.0，脚本用 MIT**：
+**这是一个混合许可仓库（mixed-license repository）** —— 不是「MIT 仓库」，也不是「CC BY 仓库」。
+仓库里不同部分适用不同许可，各自全文见下表指向的文件：
 
-| 内容 | 许可 |
-|---|---|
-| `frocloud.xlsx`、`data/*.csv`、`README.md`、工作簿内的文字说明 | **CC BY 4.0**（第一节） |
-| `tools/` 下的脚本 | **MIT**（第五节） |
-| 第三方跑分与拆解资料 | 不属于本仓库许可范围（第二节） |
+| 内容 | 许可 | 全文 |
+|---|---|---|
+| `frocloud.xlsx`、`data/*.csv`、`README.md`、工作簿内的文字说明 | **CC BY 4.0** | [`LICENSES/CC-BY-4.0.txt`](LICENSES/CC-BY-4.0.txt) |
+| `tools/` 下的脚本（`export_csv.py`、`check_csv.py`、`test_materialize.py`） | **MIT** | [`LICENSES/MIT.txt`](LICENSES/MIT.txt) |
+| 引用的第三方跑分、拆解、行情资料 | **不属于**本仓库许可范围，版权归原权利人 | [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) |
+
+版权所有者：**x1shang**（GitHub） ｜ 建档：2023-05 ｜ 数据与文档版权年份：2023-2026
 
 ---
 
 ## 一、数据与文档：CC BY 4.0
 
-本仓库的数据（`frocloud.xlsx`、`data/*.csv`）与说明文字（`README.md`、工作簿里的「说明」表）
+`frocloud.xlsx`、`data/*.csv`，以及随仓库发布的说明文字（`README.md`、工作簿里的「说明」表，
+以及本文件、`DISCLAIMER.md`、`DATA-NOTES.md`、`THIRD_PARTY_NOTICES.md` 等说明性文字）
 采用 **Creative Commons Attribution 4.0 International（CC BY 4.0）** 许可。
 
 你可以自由地：
@@ -29,11 +33,13 @@
 - **不得增加额外限制** —— 你不得适用法律条款或技术措施，从而在法律上限制他人
   做本许可允许的事情。
 
-许可全文：<https://creativecommons.org/licenses/by/4.0/legalcode.zh-Hans>
+许可全文：[`LICENSES/CC-BY-4.0.txt`](LICENSES/CC-BY-4.0.txt)
+（Creative Commons 官方英文 legalcode，**逐字收录、未作任何改动**）
+官方中文译本：<https://creativecommons.org/licenses/by/4.0/legalcode.zh-Hans>
 人类可读摘要：<https://creativecommons.org/licenses/by/4.0/deed.zh-Hans>
 
-> **为什么数据不用 MIT？** MIT 是**软件**许可证，它的免责条款是围绕"软件"写的，
-> 套在数据集上既不贴切、也不覆盖数据库权利。数据用 CC BY 是通行做法。
+> **为什么数据不用 MIT？** MIT 是**软件**许可证，它的免责条款是围绕「软件」写的，
+> 套在数据集上既不贴切、也不覆盖数据库权利（sui generis database rights）。数据用 CC BY 是通行做法。
 
 ### 建议的署名格式
 
@@ -42,67 +48,29 @@
 采用 CC BY 4.0 许可。数据截止 YYYY-MM。
 ```
 
-## 二、第三方数据
+## 二、脚本：MIT
 
-本表引用的跑分与拆解资料来自第三方，**不属于**本仓库的许可范围，转载时请一并注明其原始来源：
+`tools/` 下的所有脚本（`export_csv.py`、`check_csv.py`、`test_materialize.py`）采用 **MIT License**，
+全文见 [`LICENSES/MIT.txt`](LICENSES/MIT.txt)。每个脚本的文件头也带了 SPDX 标识：
 
-| 内容 | 来源 | 说明 |
-|---|---|---|
-| 3DMark（TIME SPY / Port Royal / Steel Nomad） | UL Solutions | 商标与数据归其所有；本仓库仅引用公开数值，与 UL 无隶属或背书关系 |
-| CPU Mark / 单线程评分 | PassMark Software | 同上 |
-| 显卡用料、拆解资料 | B 站 UP 主「51972」「和微论件」 | 整理自其公开视频/图文，非本人实测 |
-| 行情辅助验证 | B 站 UP 主「和微论件」《不能碰》系列、「芝士华莱士」《显卡日报》 | 用于交叉验证价格 |
-
-## 三、免责声明
-
-- 本人为 DIY 爱好者，**并非专业测试团队**；跑分与用料数据均非自行测量。
-- 价格随渠道与时间波动，本表**仅供装机参考，不构成任何购买建议**。
-- 本表为手工整理，错漏在所难免；**不建议**将本仓库作为数据检索来源。
-- 任何人依据本表作出的决策及其后果，由使用者自行承担。
-
-## 四、数据文件里的"空"是什么意思
-
-- 空单元格 / 空字段 = **原表里就没有这个数据**，不补 0、不猜测、不用别的值顶上。
-- 唯一的例外是**合并单元格的标签**（例如「显卡品牌」里 `B3:B6 = 一线`）：
-  这种空白不是"缺数据"，而是"这个标签适用于整段"，导出 CSV 时会物化到该段的每一行。
-  合并段的锚点本身是空的（例如 Intel 区没写分级），物化后仍然是空 —— 那才是真空白。
-
-## 五、工具脚本：MIT
-
-`tools/` 下的所有脚本（`export_csv.py`、`check_csv.py`、`test_materialize.py`）
-采用 **MIT License**：
-
-```text
-MIT License
-
-Copyright (c) 2026 x1shang
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+```python
+# SPDX-License-Identifier: MIT
 ```
 
-## 六、联系
+## 三、第三方资料
 
-- 指正、纠错、要数据：请到 <https://github.com/x1shang/frocloud-DIYPCmarket/issues> 提 Issue
-- 不开设邮件渠道（避免邮箱被爬）
+本表引用的跑分与拆解资料来自第三方，**不属于**本仓库的许可范围，转载时请一并注明其原始来源。
+来源清单与商标声明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。
+
+## 四、免责与数据说明
+
+- 免责声明、使用限制与联系渠道 → [`DISCLAIMER.md`](DISCLAIMER.md)
+- 数据里的「空」是什么意思（空值口径、合并单元格物化规则） → [`DATA-NOTES.md`](DATA-NOTES.md)
+  数据部分的 SPDX 标识：`SPDX-License-Identifier: CC-BY-4.0`
+
+> 许可证覆盖的只是**授权**；数据的准确性、时效性与适用性另见上面两份说明。
 
 ---
 
-版权所有者：**x1shang**（GitHub）
 项目主页：<https://github.com/x1shang/frocloud-DIYPCmarket>
-建档：2023-05 ｜ 本文件更新：2026-10-08
+本文件更新：2026-10-08
