@@ -3,9 +3,10 @@ name: check-csv
 # 数据校验 = 这个仓库的 CI。
 #
 # 触发方式：
-#   1. 提交信息【以 (prerelease) 结尾】—— 例如
-#        git commit -m "data-2026-11 (prerelease)"
-#      整条信息以 (prerelease) 收尾时跑（尾部空白无所谓）。
+#   1. 提交信息【含 (prerelease)】—— 例如
+#        git commit -m "data-2026-11 (prerelease) [handmade-xlsx]"
+#      （用 contains 而不是 endsWith：手工改过 xlsx 的提交还要在末尾带
+#        [handmade-xlsx] 标记，两个标记的先后顺序不该影响 CI 是否运行。）
 #   2. 手动：Actions 页面 → check-csv → Run workflow
 #
 # 为什么不用 schedule：数据是月更、"更新到几月"取决于有没有采到，
@@ -18,8 +19,8 @@ on:
 
 jobs:
   check:
-    # 只认"提交信息以 (prerelease) 结尾"的 push；手动触发不做这个限制。
-    if: github.event_name == 'workflow_dispatch' || endsWith(github.event.head_commit.message, '(prerelease)')
+    # 只认"提交信息包含 (prerelease)"的 push；手动触发不做这个限制。
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '(prerelease)')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

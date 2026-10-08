@@ -81,7 +81,7 @@
 python tools/export_csv.py
 # 3) 校验
 python tools/check_csv.py
-# 4) 提交时带上标记
+# 4) 提交时带上标记（两个标记的先后顺序无所谓）
 git commit -m "data-2026-11 (prerelease) [handmade-xlsx]"
 ```
 
@@ -188,8 +188,8 @@ git tag data-2026-11; git push --tags
 
 `check_csv.py` 就是这套东西的 CI：失败会返回**非零退出码**。仓库里已挂好 `.github/workflows/check-csv.yml`：
 
-- **触发**：提交信息**以 `(prerelease)` 结尾**的 push（例如 `git commit -m "data-2026-11 (prerelease)"`），或在 Actions 页面手动 `Run workflow`。
-- **跑什么**：导出 → 校验 CSV → 检查 xlsx 与 CSV 是否同步（改了 xlsx 却没导出 CSV 会红）→ 数据新鲜度（超过 45 天未更新只给 warning，不红）。
+- **触发**：提交信息**含 `(prerelease)`** 的 push（例如 `git commit -m "data-2026-11 (prerelease) [handmade-xlsx]"`），或在 Actions 页面手动 `Run workflow`。
+- **跑什么**：**xlsx 守卫**（机器禁碰工作簿）→ 导出 → 合并单元格物化回归测试 → 校验 CSV → 检查 xlsx 与 CSV 是否同步（改了 xlsx 却没导出 CSV 会红）→ 数据新鲜度（超过 45 天未更新只给 warning，不红）。
 
 **改了 xlsx 的表头怎么办？** `export_csv.py` 会停下并打印形如
 `显卡行情：第 2 行出现未映射的表头列 AB=新列名 —— 请先在 export_csv.py 里显式登记`
